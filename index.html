@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>WorkBuddy 积分仪表盘</title>
+<style>
+:root{--bg:#0f1420;--card:#1a2232;--line:#2a3550;--tx:#e8ecf5;--sub:#8b96ad;
+--acc:#4f8cff;--ok:#3ecf8e;--warn:#ffb454;--bad:#ff6b6b}
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:var(--bg);color:var(--tx);font-family:"Microsoft YaHei",system-ui,sans-serif;padding:24px;min-height:100vh}
+h1{font-size:20px;margin-bottom:4px}
+.sub{color:var(--sub);font-size:12px;margin-bottom:20px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:12px;margin-bottom:20px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:14px 16px}
+.card .k{color:var(--sub);font-size:12px;margin-bottom:6px}
+.card .v{font-size:24px;font-weight:700}
+.card .v.ok{color:var(--ok)} .card .v.warn{color:var(--warn)} .card .v.acc{color:var(--acc)}
+.panel{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:20px}
+.panel h2{font-size:14px;color:var(--sub);margin-bottom:12px;font-weight:500}
+.legend{display:flex;gap:14px;flex-wrap:wrap;margin-bottom:8px;font-size:12px}
+.legend span{display:inline-flex;align-items:center;gap:5px}
+.dot{width:10px;height:10px;border-radius:2px;display:inline-block}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th,td{padding:8px 10px;text-align:left;border-bottom:1px solid var(--line)}
+th{color:var(--sub);font-weight:500;font-size:12px}
+.bad{color:var(--bad)} .ok{color:var(--ok)} .warn{color:var(--warn)}
+.acct-sel{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px}
+.acct-sel button{background:var(--line);color:var(--tx);border:none;border-radius:6px;padding:6px 14px;cursor:pointer;font-size:12px}
+.acct-sel button.on{background:var(--acc)}
+.bar{height:8px;background:var(--line);border-radius:4px;overflow:hidden;margin-top:6px}
+.bar i{display:block;height:100%;background:var(--ok);border-radius:4px}
+</style>
+</head>
+<body>
+<h1>🌱 WorkBuddy 积分仪表盘</h1>
+<div class="sub" id="updated">加载中…</div>
+<div class="grid" id="cards"></div>
+<div class="panel">
+  <h2>📈 积分余额趋势（每日快照）</h2>
+  <div class="acct-sel" id="acctSel"></div>
+  <div id="chart"></div>
+</div>
+<div class="panel">
+  <h2>📦 积分明细与到期提醒</h2>
+  <div id="detail"></div>
+</div>
+<div class="panel">
+  <h2>🗂 历史记录（最近 60 条）</h2>
+  <table id="hist"><thead><tr><th>日期</th><th>账号</th><th>积分余额</th><th>较前日</th></tr></thead><tbody></tbody></table>
+</div>
+<script>
+const COLORS=["#4f8cff","#3ecf8e","#ffb454","#c792ea","#ff6b6b","#22d3ee"];
+let DATA=null,LATEST=null;
+const fmt=n=>Number(n).toLocaleString("zh-CN",{maximumFractionDigits:2});
+async function load(){
+  if(window.__DATA__){DATA=window.__DATA__.history;LATEST=window.__DATA__.latest;}
+  else{
+    try{DATA=await (await fetch("./history.json")).json();LATEST=await (await fetch("./latest.json")).json();}
+    catch(e){document.getElementById("updated").textContent="数据加载失败："+e.message;return;}
+  }
+  render();
+}
+function render(){
+  document.getElementById("updated").textContent="数据更新时间："+(DATA.updated_at||"—")+"（每天 07:00 / 12:00 / 23:30 自动刷新）";
+  const recs=DATA.records||[];
+  const accts=[...new Set(recs.map(r=>r.account))];
+  const lat=LATEST&&LATEST.accounts?LATEST.accounts:[];
+  const total=lat.reduce((s,a)=>s+a.balance,0);
+  const soonExp=lat.flatMap(a=>(a.packages||[]).filter(p=>{const d=(new Date(p.expire)-new Date())/864e5;return d<=7&&d>0;}));
+  const soonSum=soonExp.reduce((s,p)=>s+p.remain,0);
+  const today=recs.filter(r=>r.date===recs.reduce((m,r)=>r.date>m?r.date:m,""));
+  const todayGain=today.reduce((s,r)=>s+r.balance,0);
+  document.getElementById("cards").innerHTML=
+    `<div class="card"><div class="k">💰 当前总积分</div><div class="v ok">${fmt(total)}</div></div>`+
+    `<div class="card"><div class="k">👤 账号数</div><div class="v acc">${accts.length}</div></div>`+
+    `<div class="card"><div class="k">⏳ 7 天内到期</div><div class="v ${soonSum>0?"warn":"ok"}">${fmt(soonSum)}</div></div>`+
+    `<div class="card"><div class="k">📅 今日快照</div><div class="v">${fmt(todayGain)}</div></div>`;
+  // 账号选择
+  const sel=document.getElementById("acctSel");
+  sel.innerHTML=`<button class="on" data-a="__all">全部</button>`+accts.map(a=>`<button data-a="${a}">${a}</button>`).join("");
+  sel.onclick=e=>{if(e.target.dataset.a){sel.querySelectorAll("button").forEach(b=>b.classList.remove("on"));e.target.classList.add("on");drawChart(e.target.dataset.a);}};
+  drawChart("__all");
+  // 明细
+  document.getElementById("detail").innerHTML=lat.map(a=>{
+    const nx=a.next_expiry, nxTxt=nx?`${nx.date} 到期 ${fmt(nx.amount)} 分${nx.monthly?"（月包清零）":""}`:"无";
+    const dLeft=nx?Math.ceil((new Date(nx.date)-new Date())/864e5):999;
+    const cls=dLeft<=7?"bad":(dLeft<=15?"warn":"ok");
+    const monthly=(a.packages||[]).filter(p=>p.monthly).reduce((s,p)=>s+p.remain,0);
+    const gift=(a.balance||0)-monthly;
+    return `<div style="margin-bottom:14px"><b>${a.account}</b>　余额 <b class="ok">${fmt(a.balance)}</b>
+      <div class="bar"><i style="width:${a.balance?Math.min(100,monthly/a.balance*100):0}%"></i></div>
+      <div style="font-size:12px;color:var(--sub);margin-top:6px">月包 ${fmt(monthly)} ｜ 活动赠送 ${fmt(gift)} ｜ 下一笔：<span class="${cls}">${nxTxt}</span></div></div>`;
+  }).join("")||"<span style='color:var(--sub)'>暂无数据</span>";
+  // 历史
+  const rows=[...recs].slice(-60).reverse();
+  const prev={};
+  document.querySelector("#hist tbody").innerHTML=rows.map(r=>{
+    const k=r.account, diff=prev[k]===undefined?null:r.balance-prev[k]; prev[k]=r.balance;
+    return `<tr><td>${r.date}</td><td>${r.account}</td><td>${fmt(r.balance)}</td><td>${diff===null?"—":(diff>=0?`<span class="ok">+${fmt(diff)}</span>`:`<span class="bad">${fmt(diff)}</span>`)}</td></tr>`;
+  }).join("");
+}
+function drawChart(only){
+  const recs=DATA.records||[];
+  const accts=[...new Set(recs.map(r=>r.account))].filter(a=>only==="__all"||a===only);
+  const dates=[...new Set(recs.map(r=>r.date))].sort();
+  if(!dates.length){document.getElementById("chart").innerHTML="<span style='color:var(--sub)'>暂无历史数据</span>";return;}
+  const W=860,H=280,P={l:56,r:16,t:14,b:34};
+  const vals=recs.filter(r=>accts.includes(r.account)).map(r=>r.balance);
+  let mn=Math.min(...vals),mx=Math.max(...vals);if(mn===mx){mn-=100;mx+=100;}
+  mn=Math.max(0,mn-(mx-mn)*0.15);mx+=(mx-mn)*0.08;
+  const X=i=>dates.length<2?P.l+(W-P.l-P.r)/2:P.l+i*(W-P.l-P.r)/(dates.length-1);
+  const Y=v=>P.t+(H-P.t-P.b)*(1-(v-mn)/(mx-mn));
+  let s=`<svg viewBox="0 0 ${W} ${H}" style="width:100%;height:auto">`;
+  for(let g=0;g<=4;g++){const v=mn+(mx-mn)*g/4,y=Y(v);
+    s+=`<line x1="${P.l}" y1="${y}" x2="${W-P.r}" y2="${y}" stroke="#2a3550" stroke-width="1"/><text x="${P.l-8}" y="${y+4}" fill="#8b96ad" font-size="10" text-anchor="end">${fmt(v)}</text>`;}
+  const step=Math.ceil(dates.length/8);
+  dates.forEach((d,i)=>{if(i%step===0)s+=`<text x="${X(i)}" y="${H-10}" fill="#8b96ad" font-size="10" text-anchor="middle">${d.slice(5)}</text>`;});
+  accts.forEach((a,ai)=>{
+    const pts=dates.map((d,i)=>{const r=recs.find(x=>x.date===d&&x.account===a);return r?`${X(i)},${Y(r.balance)}`:null;}).filter(Boolean);
+    if(pts.length===1)s+=`<circle cx="${pts[0].split(",")[0]}" cy="${pts[0].split(",")[1]}" r="4" fill="${COLORS[ai%6]}"/>`;
+    else s+=`<polyline points="${pts.join(" ")}" fill="none" stroke="${COLORS[ai%6]}" stroke-width="2.5" stroke-linejoin="round"/>`;
+  });
+  s+="</svg><div class='legend'>"+accts.map((a,i)=>`<span><i class="dot" style="background:${COLORS[i%6]}"></i>${a}</span>`).join("")+"</div>";
+  document.getElementById("chart").innerHTML=s;
+}
+load();
+</script>
+</body>
+</html>
