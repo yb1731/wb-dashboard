@@ -1,9 +1,9 @@
 {
- "updated_at": "2026-10-19T08:50:13+08:00",
+ "updated_at": "2026-10-19T09:25:18+08:00",
  "accounts": [
   {
    "account": "13*******31",
-   "balance": 4288.57,
+   "balance": 4288.52,
    "packages": [
     {
      "remain": 83.0,
@@ -119,7 +119,7 @@
   },
   {
    "account": "13*******73",
-   "balance": 455.65,
+   "balance": 455.61,
    "packages": [
     {
      "remain": 100.0,
