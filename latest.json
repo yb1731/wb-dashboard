@@ -1,9 +1,9 @@
 {
- "updated_at": "2026-10-22T03:32:07+08:00",
+ "updated_at": "2026-10-22T09:14:33+08:00",
  "accounts": [
   {
    "account": "13*******31",
-   "balance": 4913.5,
+   "balance": 4921.5,
    "packages": [
     {
      "remain": 1386.0,
@@ -149,6 +149,11 @@
      "remain": 100.0,
      "expire": "2026-11-22",
      "monthly": false
+    },
+    {
+     "remain": 8.0,
+     "expire": "2026-11-22",
+     "monthly": false
     }
    ],
    "next_expiry": {
@@ -159,7 +164,7 @@
   },
   {
    "account": "13*******73",
-   "balance": 218.45,
+   "balance": 224.45,
    "packages": [
     {
      "remain": 9.0,
@@ -173,6 +178,11 @@
     },
     {
      "remain": 100.0,
+     "expire": "2026-11-22",
+     "monthly": false
+    },
+    {
+     "remain": 6.0,
      "expire": "2026-11-22",
      "monthly": false
     },
