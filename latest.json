@@ -1,33 +1,28 @@
 {
- "updated_at": "2026-11-09T20:17:36+08:00",
+ "updated_at": "2026-11-10T07:52:43+08:00",
  "accounts": [
   {
    "account": "13*******31",
-   "balance": 47.38,
+   "balance": 99.84,
    "packages": [
     {
-     "remain": 40.0,
-     "expire": "2026-12-09",
-     "monthly": false
-    },
-    {
-     "remain": 7.0,
-     "expire": "2026-12-09",
+     "remain": 99.0,
+     "expire": "2026-12-10",
      "monthly": false
     }
    ],
    "next_expiry": {
-    "date": "2026-12-09",
-    "amount": 40.0,
+    "date": "2026-12-10",
+    "amount": 99.0,
     "monthly": false
    }
   },
   {
    "account": "13*******73",
-   "balance": 2459.82,
+   "balance": 2559.64,
    "packages": [
     {
-     "remain": 151.0,
+     "remain": 150.0,
      "expire": "2026-11-24",
      "monthly": false
     },
@@ -217,6 +212,11 @@
      "monthly": false
     },
     {
+     "remain": 100.0,
+     "expire": "2026-12-10",
+     "monthly": false
+    },
+    {
      "remain": 8.0,
      "expire": "2027-04-20",
      "monthly": false
@@ -224,7 +224,7 @@
    ],
    "next_expiry": {
     "date": "2026-11-24",
-    "amount": 151.0,
+    "amount": 150.0,
     "monthly": false
    }
   }
